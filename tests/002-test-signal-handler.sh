@@ -3,7 +3,7 @@
 source $SRCDIR/utils.sh
 
 test_signal_handler_nomad_job() {
-    pushd ~/go/src/github.com/Roblox/nomad-driver-containerd/example
+    pushd ~/go/src/github.com/hashistack4u/nomad-driver-containerd/example
 
     echo "INFO: Starting nomad signal handler job using nomad-driver-containerd."
     nomad job run -detach signal.nomad

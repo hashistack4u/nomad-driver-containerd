@@ -4,7 +4,7 @@ source $SRCDIR/utils.sh
 
 # readonly_rootfs, cap_add and cap_drop flags are tested as part of this test.
 test_capabilities_nomad_job() {
-    pushd ~/go/src/github.com/Roblox/nomad-driver-containerd/example
+    pushd ~/go/src/github.com/hashistack4u/nomad-driver-containerd/example
 
     echo "INFO: Starting nomad capabilities job using nomad-driver-containerd."
     nomad job run -detach capabilities.nomad

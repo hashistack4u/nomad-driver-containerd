@@ -34,8 +34,8 @@ is_container_active() {
 			fi
                         break
                 fi
-                echo "INFO: ${job_name} container is down, sleep for 4 seconds."
-                sleep 4s
+                echo "INFO: ${job_name} container is down, sleep for 10 seconds."
+                sleep 10s
                 i=$[$i+1]
         done
 

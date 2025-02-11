@@ -1,8 +1,8 @@
 # nomad-driver-containerd
 
-[![CI Actions Status](https://github.com/Roblox/nomad-driver-containerd/workflows/CI/badge.svg)](https://github.com/Roblox/nomad-driver-containerd/actions)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Roblox/nomad-driver-containerd/blob/master/LICENSE)
-[![Release](https://img.shields.io/github/release/Roblox/nomad-driver-containerd.svg)](https://github.com/Roblox/nomad-driver-containerd/releases/latest)
+[![CI Actions Status](https://github.com/hashistack4u/nomad-driver-containerd/workflows/CI/badge.svg)](https://github.com/hashistack4u/nomad-driver-containerd/actions)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/hashistack4u/nomad-driver-containerd/blob/master/LICENSE)
+[![Release](https://img.shields.io/github/release/Roblox/nomad-driver-containerd.svg)](https://github.com/hashistack4u/nomad-driver-containerd/releases/latest)
 [![Docs](https://img.shields.io/badge/docs-website-green.svg)](https://www.nomadproject.io/docs/drivers/external/containerd)
 
 <img src="images/nomad.png" width="232" height="100" />&nbsp;<img src="images/docker.png" width="116" height="100" />&nbsp;<img src="images/containerd.png" width="285" height="100" />
@@ -78,14 +78,14 @@ $ nomad node status <node_id> | grep containerd-driver
 
 ## Run example jobs
 
-There are few example jobs in the [`example`](https://github.com/Roblox/nomad-driver-containerd/tree/master/example) directory.
+There are few example jobs in the [`example`](https://github.com/hashistack4u/nomad-driver-containerd/tree/master/example) directory.
 
 ```shell
 $ nomad job run <job_name>.nomad
 ```
 will launch the job.
 
-More detailed instructions are available in the [`example README.md`](https://github.com/Roblox/nomad-driver-containerd/tree/master/example).
+More detailed instructions are available in the [`example README.md`](https://github.com/hashistack4u/nomad-driver-containerd/tree/master/example).
 
 To interact with `images` and `containers` directly, you can use [`nerdctl`](https://github.com/containerd/nerdctl) which is a docker compatible CLI for `containerd`.
 `nerdctl` is already installed in the vagrant VM at `/usr/local/bin`.
@@ -156,7 +156,7 @@ mounts = [
 
 In addition to the `mounts` option in `Task Config`, you can also mount your volumes into the container using nomad [`volume_mount stanza`](https://www.nomadproject.io/docs/job-specification/volume_mount)
 
-See [`example job`](https://github.com/Roblox/nomad-driver-containerd/blob/master/example/volume_mount.nomad) for `volume_mount`.
+See [`example job`](https://github.com/hashistack4u/nomad-driver-containerd/blob/master/example/volume_mount.nomad) for `volume_mount`.
 
 **Custom seccomp profile example**
 
@@ -326,6 +326,8 @@ Ubuntu (>= 16.04)
 
 ## License
 
-Copyright 2020 Roblox Corporation
+Copyright 2025 HashiStack For You Community
+
+Copyright 2020-2024 Roblox Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License"). For more information read the [License](LICENSE).

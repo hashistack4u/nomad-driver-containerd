@@ -7,7 +7,7 @@ filename="/mosquitto/config/mosquitto.conf"
 
 # test template stanza
 test_template_stanza_nomad_job() {
-    pushd ~/go/src/github.com/Roblox/nomad-driver-containerd/example
+    pushd ~/go/src/github.com/hashistack4u/nomad-driver-containerd/example
 
     echo "INFO: Starting nomad $job_name job using nomad-driver-containerd."
     nomad job run -detach $job_name.nomad
