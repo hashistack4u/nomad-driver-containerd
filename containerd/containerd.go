@@ -23,15 +23,15 @@ import (
 	"strings"
 	"time"
 
-	etchosts "github.com/Roblox/nomad-driver-containerd/etchosts"
 	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/cio"
+	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/contrib/seccomp"
 	"github.com/containerd/containerd/oci"
 	refdocker "github.com/containerd/containerd/reference/docker"
 	remotesdocker "github.com/containerd/containerd/remotes/docker"
 	"github.com/docker/go-units"
+	etchosts "github.com/hashistack4u/nomad-driver-containerd/etchosts"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -292,7 +292,7 @@ func (d *Driver) createContainer(containerConfig *ContainerConfig, config *TaskC
 		}
 
 		// Allow paths relative to $NOMAD_TASK_DIR.
-		// More details: https://github.com/Roblox/nomad-driver-containerd/issues/116#issuecomment-983171458
+		// More details: https://github.com/hashistack4u/nomad-driver-containerd/issues/116#issuecomment-983171458
 		if mount.Type == "bind" && strings.HasPrefix(mount.Source, "local") {
 			mount.Source = containerConfig.TaskDirSrc + mount.Source[5:]
 		}

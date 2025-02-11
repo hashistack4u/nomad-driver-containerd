@@ -7,12 +7,12 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v2
       - name: Run containerd-driver integration tests
         run: |
-          mkdir -p /home/runner/go/src/github.com/Roblox
-          ln -s /home/runner/work/nomad-driver-containerd/nomad-driver-containerd /home/runner/go/src/github.com/Roblox/nomad-driver-containerd
-          cd /home/runner/go/src/github.com/Roblox/nomad-driver-containerd
+          mkdir -p /home/runner/go/src/github.com/hashistack4u
+          ln -s /home/runner/work/nomad-driver-containerd/nomad-driver-containerd /home/runner/go/src/github.com/hashistack4u/nomad-driver-containerd
+          cd /home/runner/go/src/github.com/hashistack4u/nomad-driver-containerd
           make test

@@ -7,7 +7,7 @@ host_volume_path=/tmp/host_volume/s1
 
 # test volume_mount
 test_volume_mount_nomad_job() {
-    pushd ~/go/src/github.com/Roblox/nomad-driver-containerd/example
+    pushd ~/go/src/github.com/hashistack4u/nomad-driver-containerd/example
 
     setup_bind_source
 

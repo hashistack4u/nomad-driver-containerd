@@ -8,10 +8,10 @@ Vagrant.configure("2") do |config|
   config.vm.box = "generic/ubuntu2204"
   config.vm.provider "libvirt" do |v, override|
     override.vm.box = "generic/debian10"
-    override.vm.synced_folder ".", "/home/vagrant/go/src/github.com/Roblox/nomad-driver-containerd", type: "nfs", nfs_version: 4, nfs_udp: false
+    override.vm.synced_folder ".", "/home/vagrant/go/src/github.com/hashistack4u/nomad-driver-containerd", type: "nfs", nfs_version: 4, nfs_udp: false
   end
-  config.vm.synced_folder ".", "/home/vagrant/go/src/github.com/Roblox/nomad-driver-containerd"
-  config.ssh.extra_args = ["-t", "cd /home/vagrant/go/src/github.com/Roblox/nomad-driver-containerd; bash --login"]
+  config.vm.synced_folder ".", "/home/vagrant/go/src/github.com/hashistack4u/nomad-driver-containerd"
+  config.ssh.extra_args = ["-t", "cd /home/vagrant/go/src/github.com/hashistack4u/nomad-driver-containerd; bash --login"]
   config.vm.network "forwarded_port", guest: 4646, host: 4646, host_ip: "127.0.0.1"
   config.vm.provider "virtualbox" do |vb|
       vb.name = "containerd-linux"
@@ -65,7 +65,7 @@ Vagrant.configure("2") do |config|
     mkdir -p /tmp/host_volume/s1
 
     # Run setup
-    cd /home/vagrant/go/src/github.com/Roblox/nomad-driver-containerd/vagrant
+    cd /home/vagrant/go/src/github.com/hashistack4u/nomad-driver-containerd/vagrant
     ./setup.sh
   SHELL
 end

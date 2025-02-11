@@ -5,7 +5,7 @@ job_name=privileged-not-allowed
 
 # allow_privileged=false set in the plugin config, should deny all privileged jobs.
 test_allow_privileged() {
-    pushd ~/go/src/github.com/Roblox/nomad-driver-containerd/example
+    pushd ~/go/src/github.com/hashistack4u/nomad-driver-containerd/example
 
     cp agent.hcl agent.hcl.bkp
 

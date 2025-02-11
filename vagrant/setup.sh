@@ -7,7 +7,7 @@ main() {
   echo "WARN: Some installation steps are time consuming. Please be patient!"
 
   # Save project root directory.
-  root_dir="/home/vagrant/go/src/github.com/Roblox/nomad-driver-containerd"
+  root_dir="/home/vagrant/go/src/github.com/hashistack4u/nomad-driver-containerd"
   pushd $root_dir >/dev/null 2>&1
   echo "INFO: Drop systemd unit containerd.service into /lib/systemd/system/containerd.service."
   drop_containerd_unit_file
@@ -54,7 +54,7 @@ Documentation=https://nomadproject.io
 After=network.target containerd.service
 
 [Service]
-ExecStart=$nomad agent -bind=0.0.0.0 -config=$1/example/agent.hcl -plugin-dir=/tmp/nomad-driver-containerd
+ExecStart=$nomad agent -server -bind=0.0.0.0 -config=$1/example/agent.hcl -plugin-dir=/tmp/nomad-driver-containerd
 KillMode=process
 Delegate=yes
 LimitNOFILE=1048576
