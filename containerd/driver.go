@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/defaults"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/hashicorp/consul-template/signals"
 	"github.com/hashicorp/go-hclog"
@@ -37,7 +38,6 @@ import (
 	"github.com/hashicorp/nomad/plugins/drivers"
 	"github.com/hashicorp/nomad/plugins/shared/hclspec"
 	"github.com/hashicorp/nomad/plugins/shared/structs"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 const (
@@ -260,21 +260,12 @@ func NewPlugin(logger log.Logger) drivers.DriverPlugin {
 
 	// This will create a new containerd client which will talk to
 	// default containerd socket path.
-	client, err := containerd.New("/run/containerd/containerd.sock")
+	client, err := containerd.New(defaults.DefaultAddress)
 	if err != nil {
 		logger.Error("Error in creating containerd client", "err", err)
 		return nil
 	}
-
-	// Calls to containerd API are namespaced.
-	// "nomad" is the namespace that will be used for all nomad-driver-containerd
-	// related containerd API calls.
-	namespace := "nomad"
-	// Unless we are operating in cgroups.v2 mode, in which case we use the
-	// name "nomad.slice", which ends up being the cgroup parent.
-	if cgroups.IsCgroup2UnifiedMode() {
-		namespace = "nomad.slice"
-	}
+	namespace := getNamespaceName()
 	ctxContainerd := namespaces.WithNamespace(context.Background(), namespace)
 
 	return &Driver{
@@ -445,13 +436,7 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 	handle := drivers.NewTaskHandle(taskHandleVersion)
 	handle.Config = cfg
 
-	// Use Nomad's docker naming convention for the container name
-	// https://www.nomadproject.io/docs/drivers/docker#container-name
-	containerName := cfg.Name + "-" + cfg.AllocID
-	if cgroups.IsCgroup2UnifiedMode() {
-		// In cgroup.v2 mode, the name is slightly different.
-		containerName = fmt.Sprintf("%s.%s.scope", cfg.AllocID, cfg.Name)
-	}
+	containerName := getContainerName(cfg.Name, cfg.AllocID)
 	containerConfig.ContainerName = containerName
 
 	var err error

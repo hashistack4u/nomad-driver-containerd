@@ -16,6 +16,7 @@ clean:
 .PHONY: build
 build:
 	$(GOLANG) build -o $(BINARY) .
+	GOOS=windows $(GOLANG) build -o $(BINARY).exe .
 
 .PHONY: test
 test:
