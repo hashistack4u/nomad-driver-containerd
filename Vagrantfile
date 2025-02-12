@@ -23,7 +23,7 @@ Vagrant.configure("2") do |config|
     apt-get install -y unzip gcc runc jq make
     echo "export GOPATH=/home/vagrant/go" >> /home/vagrant/.bashrc
     echo "export PATH=$PATH:/usr/local/go/bin" >> /home/vagrant/.bashrc
-    echo "export CONTAINERD_NAMESPACE=nomad" >> /home/vagrant/.bashrc
+    echo "export CONTAINERD_NAMESPACE=nomad.slice" >> /home/vagrant/.bashrc
     source /home/vagrant/.bashrc
     # without keeping HOME env, 'sudo make test' will try to find files under /root/go/
     echo "Defaults env_keep += HOME" | sudo tee /etc/sudoers.d/keep_home

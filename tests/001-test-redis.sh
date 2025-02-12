@@ -50,13 +50,13 @@ test_redis_nomad_job() {
     fi
 
     echo "INFO: Check if memory and memory_max are set correctly in the cgroup filesystem."
-    task_name=$(sudo CONTAINERD_NAMESPACE=nomad ctr containers ls|awk 'NR!=1'|cut -d' ' -f1)
-    memory_soft_limit=$(sudo cat /sys/fs/cgroup/memory/nomad/$task_name/memory.soft_limit_in_bytes)
+    task_name=$(sudo CONTAINERD_NAMESPACE=nomad.slice ctr containers ls|awk 'NR!=1'|cut -d' ' -f1)
+    memory_soft_limit=$(sudo cat /sys/fs/cgroup/nomad.slice/$task_name/memory.low)
     if [ $memory_soft_limit != "$(( 256 * 1024 * 1024 ))" ]; then
        echo "ERROR: memory should be 256 MB. Found ${memory_soft_limit}."
        exit 1
     fi
-    memory_hard_limit=$(sudo cat /sys/fs/cgroup/memory/nomad/$task_name/memory.limit_in_bytes)
+    memory_hard_limit=$(sudo cat /sys/fs/cgroup/nomad.slice/$task_name/memory.max)
     if [ $memory_hard_limit != "$(( 512 * 1024 * 1024 ))" ]; then
        echo "ERROR: memory_max should be 512 MB. Found ${memory_hard_limit}."
        exit 1

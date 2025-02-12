@@ -32,7 +32,7 @@ test_signal_handler_nomad_job() {
     alloc_id=$(nomad job status signal|awk 'END{print}'|cut -d ' ' -f 1)
     local outfile=$(mktemp /tmp/signal.XXXXXX)
     nomad alloc signal -s INVALID $alloc_id >> $outfile 2>&1
-    if ! grep -q "Invalid signal" $outfile; then
+    if ! grep -q "invalid signal" $outfile; then
         echo "ERROR: Invalid signal didn't error out."
         cleanup "$outfile"
         exit 1

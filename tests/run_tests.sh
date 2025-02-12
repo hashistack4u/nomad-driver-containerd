@@ -2,8 +2,9 @@
 
 set -eo pipefail
 
-export NOMAD_VERSION=1.9.5
+export NOMAD_VERSION=1.9.6
 export CONTAINERD_VERSION=1.7.25
+export RUNC_VERSION=1.2.4
 export PATH=$PATH:/usr/local/go/bin
 export PATH=$PATH:/usr/local/bin
 if [ -e /home/runner ]; then
@@ -88,6 +89,11 @@ setup() {
 	curl -L -o containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz
 	sudo tar -C /usr/local -xzf containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz
 	rm -f containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz
+
+	# Install runc
+	curl -L -o runc https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.amd64
+	chmod 0755 runc
+	sudo mv runc /usr/local/bin/
 
 	# Drop containerd systemd unit file into /lib/systemd/system.
 	cat << EOF > containerd.service
