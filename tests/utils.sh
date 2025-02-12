@@ -26,7 +26,7 @@ is_container_active() {
         i="0"
         while test $i -lt 5
         do
-                sudo CONTAINERD_NAMESPACE=nomad ctr task ls|grep -q RUNNING
+                sudo CONTAINERD_NAMESPACE=nomad.slice ctr task ls|grep -q RUNNING
                 if [ $? -eq 0 ]; then
                         echo "INFO: ${job_name} container is up and running"
 			if [ "$is_sleep" = true ]; then
@@ -34,8 +34,8 @@ is_container_active() {
 			fi
                         break
                 fi
-                echo "INFO: ${job_name} container is down, sleep for 4 seconds."
-                sleep 4s
+                echo "INFO: ${job_name} container is down, sleep for 10 seconds."
+                sleep 10s
                 i=$[$i+1]
         done
 

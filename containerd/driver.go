@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/defaults"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/hashicorp/consul-template/signals"
 	"github.com/hashicorp/go-hclog"
@@ -37,7 +38,6 @@ import (
 	"github.com/hashicorp/nomad/plugins/drivers"
 	"github.com/hashicorp/nomad/plugins/shared/hclspec"
 	"github.com/hashicorp/nomad/plugins/shared/structs"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 const (
@@ -48,7 +48,7 @@ const (
 
 	// PluginVersion allows the client to identify and use newer versions of
 	// an installed plugin
-	PluginVersion = "v0.9.3"
+	PluginVersion = "v0.9.5-beta1"
 
 	// fingerprintPeriod is the interval at which the plugin will send
 	// fingerprint responses
@@ -96,17 +96,20 @@ var (
 	// this is used to validate the configuration specified for the plugin
 	// when a job is submitted.
 	taskConfigSpec = hclspec.NewObject(map[string]*hclspec.Spec{
-		"image":      hclspec.NewAttr("image", "string", true),
-		"command":    hclspec.NewAttr("command", "string", false),
-		"args":       hclspec.NewAttr("args", "list(string)", false),
-		"cap_add":    hclspec.NewAttr("cap_add", "list(string)", false),
-		"cap_drop":   hclspec.NewAttr("cap_drop", "list(string)", false),
-		"cwd":        hclspec.NewAttr("cwd", "string", false),
-		"devices":    hclspec.NewAttr("devices", "list(string)", false),
-		"privileged": hclspec.NewAttr("privileged", "bool", false),
-		"pids_limit": hclspec.NewAttr("pids_limit", "number", false),
-		"pid_mode":   hclspec.NewAttr("pid_mode", "string", false),
-		"hostname":   hclspec.NewAttr("hostname", "string", false),
+		"image":       hclspec.NewAttr("image", "string", true),
+		"command":     hclspec.NewAttr("command", "string", false),
+		"args":        hclspec.NewAttr("args", "list(string)", false),
+		"cap_add":     hclspec.NewAttr("cap_add", "list(string)", false),
+		"cap_drop":    hclspec.NewAttr("cap_drop", "list(string)", false),
+		"cpuset_cpus": hclspec.NewAttr("cpuset_cpus", "string", false),
+		"cpuset_mems": hclspec.NewAttr("cpuset_mems", "string", false),
+		"cwd":         hclspec.NewAttr("cwd", "string", false),
+		"devices":     hclspec.NewAttr("devices", "list(string)", false),
+		"privileged":  hclspec.NewAttr("privileged", "bool", false),
+		"pids_limit":  hclspec.NewAttr("pids_limit", "number", false),
+		"pid_mode":    hclspec.NewAttr("pid_mode", "string", false),
+		"file_limit":  hclspec.NewAttr("file_limit", "number", false),
+		"hostname":    hclspec.NewAttr("hostname", "string", false),
 		"host_dns": hclspec.NewDefault(
 			hclspec.NewAttr("host_dns", "bool", false),
 			hclspec.NewLiteral("true"),
@@ -181,6 +184,8 @@ type TaskConfig struct {
 	Args             []string           `codec:"args"`
 	CapAdd           []string           `codec:"cap_add"`
 	CapDrop          []string           `codec:"cap_drop"`
+	CPUSetCPUs       string             `codec:"cpuset_cpus"`
+	CPUSetMEMs       string             `codec:"cpuset_mems"`
 	Cwd              string             `codec:"cwd"`
 	Devices          []string           `codec:"devices"`
 	Seccomp          bool               `codec:"seccomp"`
@@ -190,6 +195,7 @@ type TaskConfig struct {
 	Privileged       bool               `codec:"privileged"`
 	PidsLimit        int64              `codec:"pids_limit"`
 	PidMode          string             `codec:"pid_mode"`
+	FileLimit        int64              `codec:"file_limit"`
 	Hostname         string             `codec:"hostname"`
 	HostDNS          bool               `codec:"host_dns"`
 	ImagePullTimeout string             `codec:"image_pull_timeout"`
@@ -254,21 +260,12 @@ func NewPlugin(logger log.Logger) drivers.DriverPlugin {
 
 	// This will create a new containerd client which will talk to
 	// default containerd socket path.
-	client, err := containerd.New("/run/containerd/containerd.sock")
+	client, err := containerd.New(defaults.DefaultAddress)
 	if err != nil {
 		logger.Error("Error in creating containerd client", "err", err)
 		return nil
 	}
-
-	// Calls to containerd API are namespaced.
-	// "nomad" is the namespace that will be used for all nomad-driver-containerd
-	// related containerd API calls.
-	namespace := "nomad"
-	// Unless we are operating in cgroups.v2 mode, in which case we use the
-	// name "nomad.slice", which ends up being the cgroup parent.
-	if cgroups.IsCgroup2UnifiedMode() {
-		namespace = "nomad.slice"
-	}
+	namespace := getNamespaceName()
 	ctxContainerd := namespaces.WithNamespace(context.Background(), namespace)
 
 	return &Driver{
@@ -439,19 +436,13 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 	handle := drivers.NewTaskHandle(taskHandleVersion)
 	handle.Config = cfg
 
-	// Use Nomad's docker naming convention for the container name
-	// https://www.nomadproject.io/docs/drivers/docker#container-name
-	containerName := cfg.Name + "-" + cfg.AllocID
-	if cgroups.IsCgroup2UnifiedMode() {
-		// In cgroup.v2 mode, the name is slightly different.
-		containerName = fmt.Sprintf("%s.%s.scope", cfg.AllocID, cfg.Name)
-	}
+	containerName := getContainerName(cfg.Name, cfg.AllocID)
 	containerConfig.ContainerName = containerName
 
 	var err error
 	containerConfig.Image, err = d.pullImage(driverConfig.Image, driverConfig.ImagePullTimeout, &driverConfig.Auth)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error in pulling image %s: %v", driverConfig.Image, err)
+		return nil, nil, fmt.Errorf("error in pulling image %s: %v", driverConfig.Image, err)
 	}
 
 	d.logger.Info(fmt.Sprintf("Successfully pulled %s image\n", containerConfig.Image.Name()))
@@ -489,13 +480,13 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 
 	container, err := d.createContainer(&containerConfig, &driverConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error in creating container: %v", err)
+		return nil, nil, fmt.Errorf("error in creating container: %v", err)
 	}
 
 	d.logger.Info(fmt.Sprintf("Successfully created container with name: %s\n", containerName))
 	task, err := d.createTask(container, cfg.StdoutPath, cfg.StderrPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error in creating task: %v", err)
+		return nil, nil, fmt.Errorf("error in creating task: %v", err)
 	}
 
 	d.logger.Info(fmt.Sprintf("Successfully created task with ID: %s\n", task.ID()))
@@ -558,12 +549,12 @@ func (d *Driver) RecoverTask(handle *drivers.TaskHandle) error {
 
 	container, err := d.loadContainer(taskState.ContainerName)
 	if err != nil {
-		return fmt.Errorf("Error in recovering container: %v", err)
+		return fmt.Errorf("error in recovering container: %v", err)
 	}
 
 	task, err := d.getTask(container, taskState.StdoutPath, taskState.StderrPath)
 	if err != nil {
-		return fmt.Errorf("Error in recovering task: %v", err)
+		return fmt.Errorf("error in recovering task: %v", err)
 	}
 
 	ctxWithTimeout, cancel := context.WithTimeout(d.ctxContainerd, 30*time.Second)
@@ -571,7 +562,7 @@ func (d *Driver) RecoverTask(handle *drivers.TaskHandle) error {
 
 	status, err := task.Status(ctxWithTimeout)
 	if err != nil {
-		return fmt.Errorf("Error in recovering task status: %v", err)
+		return fmt.Errorf("error in recovering task status: %v", err)
 	}
 
 	h := &taskHandle{
@@ -648,7 +639,7 @@ func (d *Driver) StopTask(taskID string, timeout time.Duration, signal string) e
 	}
 
 	if err := handle.shutdown(d.ctxContainerd, timeout, syscall.SIGTERM); err != nil {
-		return fmt.Errorf("Shutdown failed: %v", err)
+		return fmt.Errorf("shutdown failed: %v", err)
 	}
 
 	return nil
@@ -727,7 +718,7 @@ func (d *Driver) SignalTask(taskID string, signal string) error {
 	// for a list of supported signals.
 	sig, ok := signals.SignalLookup[signal]
 	if !ok {
-		return fmt.Errorf("Invalid signal: %s", signal)
+		return fmt.Errorf("invalid signal: %s", signal)
 	}
 
 	return handle.signal(d.ctxContainerd, sig)
@@ -747,5 +738,5 @@ func (d *Driver) ExecTaskStreaming(ctx context.Context, taskID string, opts *dri
 // This is an optional capability.
 func (d *Driver) ExecTask(taskID string, cmd []string, timeout time.Duration) (*drivers.ExecTaskResult, error) {
 	// TODO: implement driver specific logic to execute commands in a task.
-	return nil, fmt.Errorf("This driver does not support exec")
+	return nil, fmt.Errorf("this driver does not support exec")
 }

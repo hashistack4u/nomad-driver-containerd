@@ -23,14 +23,15 @@ import (
 	"strings"
 	"time"
 
-	etchosts "github.com/Roblox/nomad-driver-containerd/etchosts"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
+	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/contrib/seccomp"
 	"github.com/containerd/containerd/oci"
 	refdocker "github.com/containerd/containerd/reference/docker"
 	remotesdocker "github.com/containerd/containerd/remotes/docker"
 	"github.com/docker/go-units"
+	etchosts "github.com/hashistack4u/nomad-driver-containerd/etchosts"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -93,10 +94,31 @@ func withResolver(creds CredentialsOpt) containerd.RemoteOpt {
 	return containerd.WithResolver(resolver)
 }
 
+func withFileLimit(maxOpenFiles uint64) oci.SpecOpts {
+	return func(_ context.Context, _ oci.Client, _ *containers.Container, spec *oci.Spec) error {
+		newRlimits := []specs.POSIXRlimit{{
+			Type: "RLIMIT_NOFILE",
+			Hard: maxOpenFiles,
+			Soft: maxOpenFiles,
+		}}
+
+		// Copy existing rlimits excluding previous RLIMIT_NOFILE
+		for _, rlimit := range spec.Process.Rlimits {
+			if rlimit.Type != "RLIMIT_NOFILE" {
+				newRlimits = append(newRlimits, rlimit)
+			}
+		}
+
+		spec.Process.Rlimits = newRlimits
+
+		return nil
+	}
+}
+
 func (d *Driver) pullImage(imageName, imagePullTimeout string, auth *RegistryAuth) (containerd.Image, error) {
 	pullTimeout, err := time.ParseDuration(imagePullTimeout)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse image_pull_timeout: %v", err)
+		return nil, fmt.Errorf("failed to parse image_pull_timeout: %v", err)
 	}
 
 	ctxWithTimeout, cancel := context.WithTimeout(d.ctxContainerd, pullTimeout)
@@ -117,7 +139,7 @@ func (d *Driver) pullImage(imageName, imagePullTimeout string, auth *RegistryAut
 
 func (d *Driver) createContainer(containerConfig *ContainerConfig, config *TaskConfig) (containerd.Container, error) {
 	if config.Command != "" && config.Entrypoint != nil {
-		return nil, fmt.Errorf("Both command and entrypoint are set. Only one of them needs to be set.")
+		return nil, fmt.Errorf("both command and entrypoint are set. Only one of them needs to be set")
 	}
 
 	// Entrypoint or Command set by the user, to override entrypoint or cmd defined in the image.
@@ -146,7 +168,7 @@ func (d *Driver) createContainer(containerConfig *ContainerConfig, config *TaskC
 	}
 
 	if !d.config.AllowPrivileged && config.Privileged {
-		return nil, fmt.Errorf("Running privileged jobs are not allowed. Set allow_privileged to true in plugin config to allow running privileged jobs.")
+		return nil, fmt.Errorf("running privileged jobs are not allowed. Set allow_privileged to true in plugin config to allow running privileged jobs")
 	}
 
 	// Enable privileged mode.
@@ -161,17 +183,22 @@ func (d *Driver) createContainer(containerConfig *ContainerConfig, config *TaskC
 
 	if config.PidMode != "" {
 		if strings.ToLower(config.PidMode) != "host" {
-			return nil, fmt.Errorf("Invalid pid_mode. Set pid_mode=host to enable host pid namespace.")
+			return nil, fmt.Errorf("invalid pid_mode. Set pid_mode=host to enable host pid namespace")
 		} else {
 			opts = append(opts, oci.WithHostNamespace(specs.PIDNamespace))
 		}
+	}
+
+	// Set the resource limit for open file descriptors
+	if config.FileLimit > 0 {
+		opts = append(opts, withFileLimit(uint64(config.FileLimit)))
 	}
 
 	// Size of /dev/shm
 	if len(config.ShmSize) > 0 {
 		shmBytes, err := units.RAMInBytes(config.ShmSize)
 		if err != nil {
-			return nil, fmt.Errorf("Error in setting shm_size: %v", err)
+			return nil, fmt.Errorf("error in setting shm_size: %v", err)
 		}
 		opts = append(opts, oci.WithDevShmSize(shmBytes/1024))
 	}
@@ -182,7 +209,7 @@ func (d *Driver) createContainer(containerConfig *ContainerConfig, config *TaskC
 	}
 
 	if !config.Seccomp && config.SeccompProfile != "" {
-		return nil, fmt.Errorf("seccomp must be set to true, if using a custom seccomp_profile.")
+		return nil, fmt.Errorf("seccomp must be set to true, if using a custom seccomp_profile")
 	}
 
 	// Enable default (or custom) seccomp profile.
@@ -217,6 +244,18 @@ func (d *Driver) createContainer(containerConfig *ContainerConfig, config *TaskC
 		opts = append(opts, oci.WithDroppedCapabilities(config.CapDrop))
 	}
 
+	// This translates to docker create/run --cpuset-cpus option.
+	// --cpuset-cpus limit the specific CPUs or cores a container can use.
+	if config.CPUSetCPUs != "" {
+		opts = append(opts, oci.WithCPUs(config.CPUSetCPUs))
+	}
+
+	// --cpuset-mems is the list of memory nodes on which processes
+	// in this cpuset are allowed to allocate memory.
+	if config.CPUSetMEMs != "" {
+		opts = append(opts, oci.WithCPUsMems(config.CPUSetMEMs))
+	}
+
 	// Set current working directory (cwd).
 	if config.Cwd != "" {
 		opts = append(opts, oci.WithProcessCwd(config.Cwd))
@@ -249,11 +288,11 @@ func (d *Driver) createContainer(containerConfig *ContainerConfig, config *TaskC
 	mounts := make([]specs.Mount, 0)
 	for _, mount := range config.Mounts {
 		if (mount.Type == "bind" || mount.Type == "volume") && len(mount.Options) <= 0 {
-			return nil, fmt.Errorf("Options cannot be empty for mount type: %s. You need to atleast pass rbind and ro.", mount.Type)
+			return nil, fmt.Errorf("options cannot be empty for mount type: %s. You need to atleast pass rbind and ro", mount.Type)
 		}
 
 		// Allow paths relative to $NOMAD_TASK_DIR.
-		// More details: https://github.com/Roblox/nomad-driver-containerd/issues/116#issuecomment-983171458
+		// More details: https://github.com/hashistack4u/nomad-driver-containerd/issues/116#issuecomment-983171458
 		if mount.Type == "bind" && strings.HasPrefix(mount.Source, "local") {
 			mount.Source = containerConfig.TaskDirSrc + mount.Source[5:]
 		}
@@ -264,8 +303,7 @@ func (d *Driver) createContainer(containerConfig *ContainerConfig, config *TaskC
 
 	// Setup host DNS (/etc/resolv.conf) into the container.
 	if config.HostDNS {
-		dnsMount := buildMountpoint("bind", "/etc/resolv.conf", "/etc/resolv.conf", []string{"rbind", "ro"})
-		mounts = append(mounts, dnsMount)
+		opts = append(opts, oci.WithHostResolvconf)
 	}
 
 	// Setup "/secrets" (NOMAD_SECRETS_DIR) in the container.

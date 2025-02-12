@@ -20,7 +20,7 @@ package main
 import (
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/Roblox/nomad-driver-containerd/containerd"
+	"github.com/hashistack4u/nomad-driver-containerd/containerd"
 
 	"github.com/hashicorp/nomad/plugins"
 

@@ -1,2 +1,3 @@
 .vagrant/
 /containerd-driver
+/containerd-driver.exe

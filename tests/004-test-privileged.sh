@@ -4,7 +4,7 @@ source $SRCDIR/utils.sh
 
 # privileged mode, devices and mounts are tested as part of this test.
 test_privileged_nomad_job() {
-    pushd ~/go/src/github.com/Roblox/nomad-driver-containerd/example
+    pushd ~/go/src/github.com/hashistack4u/nomad-driver-containerd/example
 
     setup_bind_source
 

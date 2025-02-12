@@ -5,12 +5,15 @@ job_name=privileged-not-allowed
 
 # allow_privileged=false set in the plugin config, should deny all privileged jobs.
 test_allow_privileged() {
-    pushd ~/go/src/github.com/Roblox/nomad-driver-containerd/example
+    pushd ~/go/src/github.com/hashistack4u/nomad-driver-containerd/example
 
+    sudo systemctl stop nomad
+    sleep 10s
     cp agent.hcl agent.hcl.bkp
 
-    sed -i '9 i \    allow_privileged = false' agent.hcl
-    sudo systemctl restart nomad
+    sed -i -e 's/allow_privileged = true/allow_privileged = false/' agent.hcl
+    sudo systemctl start nomad
+    sleep 10s
     is_systemd_service_active "nomad.service" true
 
     echo "INFO: Starting nomad ${job_name} job using nomad-driver-containerd."
@@ -21,7 +24,7 @@ test_allow_privileged() {
     echo "INFO: Checking status of ${job_name} job."
     alloc_id=$(nomad job status ${job_name}|grep failed|awk 'NR==1'|cut -d ' ' -f 1)
     output=$(nomad alloc status $alloc_id)
-    echo -e "$output" |grep "Running privileged jobs are not allowed" &>/dev/null
+    echo -e "$output" |grep "running privileged jobs are not allowed" &>/dev/null
     if [ $? -ne 0 ];then
        echo "ERROR: ${job_name} should have failed to run."
        return 1
