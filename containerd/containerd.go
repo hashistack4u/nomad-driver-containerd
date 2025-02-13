@@ -20,6 +20,7 @@ package containerd
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -374,10 +375,18 @@ func (d *Driver) createContainer(containerConfig *ContainerConfig, config *TaskC
 	ctxWithTimeout, cancel := context.WithTimeout(d.ctxContainerd, 30*time.Second)
 	defer cancel()
 
+	containerdRuntime := d.config.ContainerdRuntime
+	if containerdRuntime == "" {
+		containerdRuntime = "io.containerd.runc.v2"
+		if runtime.GOOS == "windows" {
+			containerdRuntime = "io.containerd.runhcs.v1"
+		}
+	}
+
 	return d.client.NewContainer(
 		ctxWithTimeout,
 		containerConfig.ContainerName,
-		containerd.WithRuntime(d.config.ContainerdRuntime, nil),
+		containerd.WithRuntime(containerdRuntime, nil),
 		containerd.WithNewSnapshot(containerConfig.ContainerSnapshotName, containerConfig.Image),
 		containerd.WithNewSpec(opts...),
 	)

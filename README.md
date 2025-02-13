@@ -97,7 +97,7 @@ To interact with `images` and `containers` directly, you can use [`nerdctl`](htt
 | Option | Type | Required | Default | Description |
 | :---: | :---: | :---: | :---: | :--- |
 | **enabled** | bool | no | true | Enable/Disable task driver. |
-| **containerd_runtime** | string | yes | N/A | Runtime for containerd e.g. `io.containerd.runc.v1` or `io.containerd.runc.v2`. |
+| **containerd_runtime** | string | false | Linux: `io.containerd.runc.v2` , Windows: `io.containerd.runhcs.v1` | Runtime for containerd e.g. `io.containerd.runc.v1` or `io.containerd.runc.v2`. |
 | **stats_interval** | string | no | 1s | Interval for collecting `TaskStats`. |
 | **allow_privileged** | bool | no | true | If set to `false`, driver will deny running privileged jobs. |
 | **auth** | block | no | N/A | Provide authentication for a private registry. See [Authentication](#authentication-private-registry) for more details. |
