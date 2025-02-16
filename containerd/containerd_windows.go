@@ -7,6 +7,7 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/oci"
+	"github.com/containerd/containerd/pkg/netns"
 )
 
 func (d *Driver) createContainer(containerConfig *ContainerConfig, config *TaskConfig) (containerd.Container, error) {
@@ -162,11 +163,16 @@ func (d *Driver) createContainer(containerConfig *ContainerConfig, config *TaskC
 	// containerConfig.NetworkNamespacePath is the path to the network namespace, which
 	// containerd joins to provide network for the container.
 	// NOTE: Only bridge networking mode is supported at this point.
-	/*
-		if containerConfig.NetworkNamespacePath != "" {
-			opts = append(opts, oci.WithLinuxNamespace(specs.LinuxNamespace{Type: specs.NetworkNamespace, Path: containerConfig.NetworkNamespacePath}))
-		}
 
+	// FixMe: Current always add NS, is that good enough?
+	//if containerConfig.NetworkNamespacePath != "" {
+	ns, err := netns.NewNetNS("")
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, oci.WithWindowsNetworkNamespace(ns.GetPath()))
+	//}
+	/*
 		if containerConfig.User != "" {
 			opts = append(opts, oci.WithUser(containerConfig.User))
 		}
