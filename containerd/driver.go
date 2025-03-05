@@ -130,6 +130,10 @@ var (
 			"username": hclspec.NewAttr("username", "string", true),
 			"password": hclspec.NewAttr("password", "string", true),
 		})),
+		"use_plain_http": hclspec.NewDefault(
+			hclspec.NewAttr("use_plain_http", "bool", false),
+			hclspec.NewLiteral("false"),
+		),
 		"mounts": hclspec.NewBlockList("mounts", hclspec.NewObject(map[string]*hclspec.Spec{
 			"type": hclspec.NewDefault(
 				hclspec.NewAttr("type", "string", false),
@@ -204,6 +208,7 @@ type TaskConfig struct {
 	ReadOnlyRootfs   bool               `codec:"readonly_rootfs"`
 	HostNetwork      bool               `codec:"host_network"`
 	Auth             RegistryAuth       `codec:"auth"`
+	UsePlainHttp     bool               `codec:"use_plain_http"`
 	Mounts           []Mount            `codec:"mounts"`
 }
 
@@ -440,7 +445,7 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 	containerConfig.ContainerName = containerName
 
 	var err error
-	containerConfig.Image, err = d.pullImage(driverConfig.Image, driverConfig.ImagePullTimeout, &driverConfig.Auth)
+	containerConfig.Image, err = d.pullImage(driverConfig.Image, driverConfig.ImagePullTimeout, &driverConfig.Auth, driverConfig.UsePlainHttp)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error in pulling image %s: %v", driverConfig.Image, err)
 	}
