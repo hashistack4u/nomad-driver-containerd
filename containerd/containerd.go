@@ -86,10 +86,12 @@ func (d *Driver) parshAuth(auth *RegistryAuth) CredentialsOpt {
 	}
 }
 
-func withResolver(creds CredentialsOpt) containerd.RemoteOpt {
+func withResolver(creds CredentialsOpt, usePlainHttp bool) containerd.RemoteOpt {
 	resolver := remotesdocker.NewResolver(remotesdocker.ResolverOptions{
-		Hosts: remotesdocker.ConfigureDefaultRegistries(remotesdocker.WithAuthorizer(
-			remotesdocker.NewDockerAuthorizer(remotesdocker.WithAuthCreds(creds)))),
+		Hosts: remotesdocker.ConfigureDefaultRegistries(
+			remotesdocker.WithAuthorizer(remotesdocker.NewDockerAuthorizer(remotesdocker.WithAuthCreds(creds))),
+			remotesdocker.WithPlainHTTP(func(f string) (bool, error) { return usePlainHttp, nil }),
+		),
 	})
 	return containerd.WithResolver(resolver)
 }
@@ -115,7 +117,7 @@ func withFileLimit(maxOpenFiles uint64) oci.SpecOpts {
 	}
 }
 
-func (d *Driver) pullImage(imageName, imagePullTimeout string, auth *RegistryAuth) (containerd.Image, error) {
+func (d *Driver) pullImage(imageName, imagePullTimeout string, auth *RegistryAuth, usePlainHttp bool) (containerd.Image, error) {
 	pullTimeout, err := time.ParseDuration(imagePullTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse image_pull_timeout: %v", err)
@@ -131,7 +133,7 @@ func (d *Driver) pullImage(imageName, imagePullTimeout string, auth *RegistryAut
 
 	pullOpts := []containerd.RemoteOpt{
 		containerd.WithPullUnpack,
-		withResolver(d.parshAuth(auth)),
+		withResolver(d.parshAuth(auth), usePlainHttp),
 	}
 
 	return d.client.Pull(ctxWithTimeout, named.String(), pullOpts...)
